@@ -1,0 +1,312 @@
+package mainprogram;
+
+import java.util.*;
+import java.util.stream.*;
+
+public class ProgramaIntegrado {
+    private static Scanner scanner = new Scanner(System.in);
+
+    public static void main(String[] args) {
+        while (true) {
+            mostrarMenu();
+            int opcion = obtenerOpcion();
+            
+            switch (opcion) {
+                case 1:
+                    pruebaCorridas();
+                    break;
+                case 2:
+                    pruebaKolmogorovSmirnov();
+                    break;
+                case 3:
+                    simulacionPortafolio();
+                    break;
+                case 4:
+                    pruebaPoker();
+                    break;
+                case 5:
+                    System.out.println("Saliendo del programa...");
+                    System.exit(0);
+                default:
+                    System.out.println("Opción no válida. Intente nuevamente.");
+            }
+            
+            System.out.println("\nPresione Enter para continuar...");
+            scanner.nextLine();
+        }
+    }
+
+    private static void mostrarMenu() {
+        System.out.println("\n=== MENÚ PRINCIPAL ===");
+        System.out.println("1. Prueba de Corridas");
+        System.out.println("2. Prueba Kolmogorov-Smirnov");
+        System.out.println("3. Simulación de Portafolio");
+        System.out.println("4. Prueba de Poker");
+        System.out.println("5. Salir");
+        System.out.print("Seleccione una opción: ");
+    }
+
+    private static int obtenerOpcion() {
+        while (!scanner.hasNextInt()) {
+            System.out.print("Entrada no válida. Ingrese un número (1-5): ");
+            scanner.next();
+        }
+        return scanner.nextInt();
+    }
+
+    // ========== PRUEBA DE CORRIDAS ==========
+    private static void pruebaCorridas() {
+        System.out.println("\n=== PRUEBA DE CORRIDAS ===");
+        
+        double[] secuencia = obtenerSecuenciaNumeros();
+        String secuenciaBinaria = construirSecuenciaBinaria(secuencia);
+        int corridas = contarCorridas(secuenciaBinaria);
+        int n = secuencia.length;
+
+        double uc0 = (2.0 * n - 1) / 3.0;
+        double varianza = (16.0 * n - 29) / 90.0;
+        double Z0 = Math.abs(corridas - uc0) / Math.sqrt(varianza);
+        double Zcritico = 1.96;
+
+        System.out.println("\nResultados:");
+        System.out.println("Secuencia binaria: " + secuenciaBinaria);
+        System.out.println("N° de corridas: " + corridas);
+        System.out.printf("Valor esperado (uc0): %.2f%n", uc0);
+        System.out.printf("Varianza (σ²): %.2f%n", varianza);
+        System.out.printf("Estadístico Z0: %.2f%n", Z0);
+        
+        System.out.println("\nConclusión:");
+        if (Z0 > Zcritico) {
+            System.out.println("Los números NO son independientes (se rechaza la hipótesis)");
+        } else {
+            System.out.println("No hay evidencia para rechazar la independencia de los números");
+        }
+    }
+
+    private static String construirSecuenciaBinaria(double[] secuencia) {
+        StringBuilder sb = new StringBuilder().append("1");
+        for (int i = 1; i < secuencia.length; i++) {
+            sb.append(secuencia[i] > secuencia[i-1] ? "1" : "0");
+        }
+        return sb.toString();
+    }
+
+    private static int contarCorridas(String secuencia) {
+        if (secuencia.isEmpty()) return 0;
+        
+        int corridas = 1;
+        for (int i = 1; i < secuencia.length(); i++) {
+            if (secuencia.charAt(i) != secuencia.charAt(i-1)) {
+                corridas++;
+            }
+        }
+        return corridas;
+    }
+
+    // ========== PRUEBA KOLMOGOROV-SMIRNOV==========
+    private static void pruebaKolmogorovSmirnov() {
+        System.out.println("\n=== PRUEBA KOLMOGOROV-SMIRNOV ===");
+        
+        double[] valores = obtenerSecuenciaNumeros();
+        Arrays.sort(valores);
+        int n = valores.length;
+        
+        System.out.print("Nivel de confianza (90, 95 o 99): ");
+        int confianza = scanner.nextInt();
+        double critico = obtenerValorCritico(confianza, n);
+        
+        double Dplus = 0, Dminus = 0;
+        System.out.println("\ni\tri\ti/n\t(i-1)/n\tD+\tD-");
+        
+        for (int i = 0; i < n; i++) {
+            double i_n = (i+1.0)/n;
+            double i_1_n = i/n;
+            double dPlus = i_n - valores[i];
+            double dMinus = valores[i] - i_1_n;
+            
+            Dplus = Math.max(Dplus, dPlus);
+            Dminus = Math.max(Dminus, dMinus);
+            
+            System.out.printf("%d\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f%n",
+                i+1, valores[i], i_n, i_1_n, dPlus, dMinus);
+        }
+        
+        double D = Math.max(Dplus, Dminus);
+        System.out.printf("%nD+ = %.4f%nD- = %.4f%nD = %.4f%nValor crítico: %.4f%n",
+            Dplus, Dminus, D, critico);
+        
+        System.out.println("\nConclusión:");
+        if (D > critico) {
+            System.out.println("Los valores NO siguen una distribución uniforme");
+        } else {
+            System.out.println("No hay evidencia para rechazar la uniformidad");
+        }
+    }
+
+    private static double obtenerValorCritico(int confianza, int n) {
+        switch (confianza) {
+            case 90: return 1.22/Math.sqrt(n);
+            case 95: return 1.36/Math.sqrt(n);
+            case 99: return 1.63/Math.sqrt(n);
+            default: return 1.36/Math.sqrt(n);
+        }
+    }
+
+    // ========== SIMULACIÓN DE PORTAFOLIO==========
+    private static void simulacionPortafolio() {
+        System.out.println("\n=== SIMULACIÓN DE PORTAFOLIO ===");
+        
+        System.out.print("Monto inicial: ");
+        double inicial = scanner.nextDouble();
+        
+        System.out.print("Retorno anual esperado (ej. 0.07): ");
+        double retornoAnual = scanner.nextDouble();
+        
+        System.out.print("Volatilidad anual (ej. 0.15): ");
+        double volatilidad = scanner.nextDouble();
+        
+        System.out.print("Años de simulación: ");
+        int años = scanner.nextInt();
+        
+        System.out.print("Número de simulaciones: ");
+        int simulaciones = scanner.nextInt();
+        
+        System.out.print("Semilla para generador: ");
+        int semilla = scanner.nextInt();
+        
+        double[][] portafolios = new double[años][simulaciones];
+        Random rand = new Random(semilla);
+        
+        // Simulación
+        for (int s = 0; s < simulaciones; s++) {
+            portafolios[0][s] = inicial * (1 + retornoAnual + volatilidad*(rand.nextDouble()*2-1));
+            
+            for (int a = 1; a < años; a++) {
+                double retorno = retornoAnual + volatilidad*(rand.nextDouble()*2-1);
+                portafolios[a][s] = portafolios[a-1][s] * (1 + retorno);
+            }
+        }
+        
+        // Resultados finales
+        double[] finales = new double[simulaciones];
+        for (int s = 0; s < simulaciones; s++) {
+            finales[s] = portafolios[años-1][s];
+        }
+        
+        Arrays.sort(finales);
+        double peor = finales[0];
+        double mejor = finales[simulaciones-1];
+        double media = Arrays.stream(finales).average().orElse(0);
+        double mediana = finales[simulaciones/2];
+        
+        System.out.println("\nResultados después de " + años + " años:");
+        System.out.printf("Peor caso: %.2f%n", peor);
+        System.out.printf("Mejor caso: %.2f%n", mejor);
+        System.out.printf("Valor promedio: %.2f%n", media);
+        System.out.printf("Mediana: %.2f%n", mediana);
+        System.out.printf("Percentil 10: %.2f%n", finales[simulaciones/10]);
+        System.out.printf("Percentil 90: %.2f%n", finales[simulaciones*9/10]);
+    }
+
+    // ========== PRUEBA DE POKER==========
+    private static void pruebaPoker() {
+        System.out.println("\n=== PRUEBA DE POKER ===");
+        
+        System.out.print("Cantidad de números: ");
+        int cantidad = scanner.nextInt();
+        
+        System.out.print("Decimales a considerar (3, 4 o 5): ");
+        int decimales = scanner.nextInt();
+        
+        System.out.print("Semilla para generador: ");
+        long semilla = scanner.nextLong();
+        
+        Random rand = new Random(semilla);
+        int[] frecuencias = new int[7]; // TD, 1P, 2P, T, TP, P, Q
+        
+        for (int i = 0; i < cantidad; i++) {
+            String numStr = String.format("%."+decimales+"f", rand.nextDouble())
+                           .substring(2, 2+decimales);
+            
+            Map<Character, Integer> conteo = new HashMap<>();
+            for (char c : numStr.toCharArray()) {
+                conteo.put(c, conteo.getOrDefault(c, 0) + 1);
+            }
+            
+            int maxRep = conteo.values().stream().max(Integer::compare).orElse(0);
+            long pares = conteo.values().stream().filter(v -> v == 2).count();
+            
+            if (maxRep == 5) frecuencias[6]++;      // Quintilla
+            else if (maxRep == 4) frecuencias[5]++; // Póker
+            else if (maxRep == 3 && pares == 1) frecuencias[4]++; // Tercia y par
+            else if (maxRep == 3) frecuencias[3]++; // Tercia
+            else if (pares == 2) frecuencias[2]++;  // Dos pares
+            else if (pares == 1) frecuencias[1]++;  // Un par
+            else frecuencias[0]++;                  // Todos diferentes
+        }
+        
+        // Mostrar resultados
+        String[] categorias = {
+            "Todos diferentes (TD)", "Un par (1P)", "Dos pares (2P)", 
+            "Tercia (T)", "Tercia y par (TP)", "Póker (P)", "Quintilla (Q)"
+        };
+        
+        double[] esperados = calcularEsperadosPoker(decimales, cantidad);
+        
+        System.out.println("\nResultados:");
+        System.out.printf("%-20s %10s %10s %10s%n", "Categoría", "Observado", "Esperado", "Diferencia");
+        
+        for (int i = 0; i < 7; i++) {
+            System.out.printf("%-20s %10d %10.1f %10.1f%n",
+                categorias[i], frecuencias[i], esperados[i], 
+                Math.abs(frecuencias[i]-esperados[i]));
+        }
+        
+        // Calcular chi-cuadrado
+        double chi2 = 0;
+        for (int i = 0; i < 7; i++) {
+            if (esperados[i] > 0) {
+                chi2 += Math.pow(frecuencias[i]-esperados[i], 2)/esperados[i];
+            }
+        }
+        
+        System.out.printf("%nEstadístico χ²: %.2f%n", chi2);
+        System.out.println("Valor crítico (95% confianza, 6 grados libertad): 12.59");
+        
+        System.out.println("\nConclusión:");
+        if (chi2 > 12.59) {
+            System.out.println("Los números NO pasan la prueba de poker");
+        } else {
+            System.out.println("Los números pasan la prueba de poker");
+        }
+    }
+
+    private static double[] calcularEsperadosPoker(int decimales, int total) {
+        double[] probs;
+        if (decimales == 3) {
+            probs = new double[]{0.72, 0.27, 0.01, 0, 0, 0, 0};
+        } else if (decimales == 4) {
+            probs = new double[]{0.504, 0.432, 0.027, 0.036, 0, 0.001, 0};
+        } else {
+            probs = new double[]{0.3024, 0.5040, 0.1080, 0.0720, 0.0090, 0.0045, 0.0001};
+        }
+        
+        double[] esperados = new double[7];
+        for (int i = 0; i < 7; i++) {
+            esperados[i] = probs[i] * total;
+        }
+        return esperados;
+    }
+
+    // ========== MÉTODOS AUXILIARES ==========
+    private static double[] obtenerSecuenciaNumeros() {
+        System.out.print("Ingrese números separados por comas: ");
+        scanner.nextLine(); // Limpiar buffer
+        String[] partes = scanner.nextLine().split(",");
+        
+        return Arrays.stream(partes)
+                   .map(String::trim)
+                   .mapToDouble(Double::parseDouble)
+                   .toArray();
+    }
+}
